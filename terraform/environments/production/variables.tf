@@ -24,17 +24,6 @@ variable "cloudflare_worker_subdomain" {
   type        = string
 }
 
-variable "vercel_api_token" {
-  description = "Vercel API token"
-  type        = string
-  sensitive   = true
-}
-
-variable "vercel_team_id" {
-  description = "Vercel team ID"
-  type        = string
-}
-
 variable "modal_token_id" {
   description = "Modal API token ID"
   type        = string
@@ -141,18 +130,17 @@ variable "modal_api_secret" {
   sensitive   = true
 }
 
-variable "nextauth_secret" {
-  description = "NextAuth.js secret (generate with: openssl rand -base64 32)"
-  type        = string
-  sensitive   = true
-}
-
 # =============================================================================
 # Configuration
 # =============================================================================
 
 variable "deployment_name" {
-  description = "Unique deployment name used in URLs and resource names. Use something unique like your GitHub username or company name (e.g., 'acme', 'johndoe'). This will create URLs like: open-inspect-{deployment_name}.vercel.app"
+  description = "Unique deployment name used in Cloudflare and Modal resource names."
+  type        = string
+}
+
+variable "web_app_url" {
+  description = "Public HTTPS URL for the Kubernetes-hosted web app (used by control-plane and slack-bot bindings)."
   type        = string
 }
 
@@ -172,20 +160,4 @@ variable "project_root" {
   description = "Root path to the project repository"
   type        = string
   default     = "../../../"
-}
-
-# =============================================================================
-# Access Control
-# =============================================================================
-
-variable "allowed_users" {
-  description = "Comma-separated list of GitHub usernames allowed to sign in (empty = allow all)"
-  type        = string
-  default     = ""
-}
-
-variable "allowed_email_domains" {
-  description = "Comma-separated list of email domains allowed to sign in (e.g., 'example.com,corp.io'). Empty = allow all domains."
-  type        = string
-  default     = ""
 }

@@ -1,0 +1,23 @@
+environments:
+  development:
+    values:
+      - ./environments/development/base.yaml
+
+---
+templates:
+  base: &base
+    missingFileHandler: "Warn"
+    historyMax: 5
+    namespace: {{ .Environment.Values.namespace | default "open-inspect" }}
+    createNamespace: false
+    timeout: 600
+    values:
+      - ./values/{{ `{{ .Release.Name | lower }}` }}.yaml.gotmpl
+      - ./environments/{{ `{{ .Environment.Name | lower }}` }}/{{ `{{ .Release.Name | lower }}` }}.yaml
+
+releases:
+  - name: open-inspect-web
+    labels:
+      app: open-inspect-web
+    chart: ../deploy/charts/open-inspect-web
+    <<: *base

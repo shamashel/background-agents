@@ -110,6 +110,18 @@ npm run typecheck
 npm run build
 ```
 
+### Docker Compose (Local)
+
+```bash
+# From repo root, create env file for container runtime
+cp packages/web/.env.example packages/web/.env
+
+# Fill required values in packages/web/.env, then run:
+docker compose -f docker-compose.web.yml up --build
+```
+
+The web UI will be available at `http://localhost:3000`.
+
 ## Pages
 
 ### Dashboard (`/`)

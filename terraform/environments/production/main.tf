@@ -4,7 +4,7 @@
 # This configuration deploys the complete Open-Inspect infrastructure:
 # - Cloudflare Workers (control-plane, slack-bot)
 # - Cloudflare KV Namespaces
-# - Vercel Web App
+# - Kubernetes-hosted Web App (URL provided as input)
 # - Modal Sandbox Infrastructure
 # =============================================================================
 
@@ -14,8 +14,7 @@ locals {
   # URLs for cross-service configuration
   control_plane_host = "open-inspect-control-plane-${local.name_suffix}.${var.cloudflare_worker_subdomain}.workers.dev"
   control_plane_url  = "https://${local.control_plane_host}"
-  web_app_url        = "https://open-inspect-${local.name_suffix}.vercel.app"
-  ws_url             = "wss://${local.control_plane_host}"
+  web_app_url        = var.web_app_url
 
   # Worker script paths (deterministic output locations)
   control_plane_script_path = "${var.project_root}/packages/control-plane/dist/index.js"
@@ -216,85 +215,6 @@ module "slack_bot_worker" {
 }
 
 # =============================================================================
-# Vercel Web App
-# =============================================================================
-
-module "web_app" {
-  source = "../../modules/vercel-project"
-
-  project_name = "open-inspect-${local.name_suffix}"
-  team_id      = var.vercel_team_id
-  framework    = "nextjs"
-
-  # No git_repository - deploy via CLI/CI instead of auto-deploy on push
-  root_directory  = "packages/web"
-  install_command = "cd ../.. && npm install && npm run build -w @open-inspect/shared"
-  build_command   = "next build"
-
-  environment_variables = [
-    # GitHub OAuth
-    {
-      key       = "GITHUB_CLIENT_ID"
-      value     = var.github_client_id
-      targets   = ["production", "preview"]
-      sensitive = false
-    },
-    {
-      key       = "GITHUB_CLIENT_SECRET"
-      value     = var.github_client_secret
-      targets   = ["production", "preview"]
-      sensitive = true
-    },
-    # NextAuth
-    {
-      key       = "NEXTAUTH_URL"
-      value     = local.web_app_url
-      targets   = ["production"]
-      sensitive = false
-    },
-    {
-      key       = "NEXTAUTH_SECRET"
-      value     = var.nextauth_secret
-      targets   = ["production", "preview"]
-      sensitive = true
-    },
-    # Control Plane
-    {
-      key       = "CONTROL_PLANE_URL"
-      value     = local.control_plane_url
-      targets   = ["production", "preview"]
-      sensitive = false
-    },
-    {
-      key       = "NEXT_PUBLIC_WS_URL"
-      value     = local.ws_url
-      targets   = ["production", "preview"]
-      sensitive = false
-    },
-    # Internal
-    {
-      key       = "INTERNAL_CALLBACK_SECRET"
-      value     = var.internal_callback_secret
-      targets   = ["production", "preview"]
-      sensitive = true
-    },
-    # Access Control
-    {
-      key       = "ALLOWED_USERS"
-      value     = var.allowed_users
-      targets   = ["production", "preview"]
-      sensitive = false
-    },
-    {
-      key       = "ALLOWED_EMAIL_DOMAINS"
-      value     = var.allowed_email_domains
-      targets   = ["production", "preview"]
-      sensitive = false
-    },
-  ]
-}
-
-# =============================================================================
 # Modal Sandbox Infrastructure
 # =============================================================================
 
@@ -346,8 +266,8 @@ module "modal_app" {
     {
       name = "internal-api"
       values = {
-        MODAL_API_SECRET             = var.modal_api_secret
-        ALLOWED_CONTROL_PLANE_HOSTS  = local.control_plane_host
+        MODAL_API_SECRET            = var.modal_api_secret
+        ALLOWED_CONTROL_PLANE_HOSTS = local.control_plane_host
       }
     }
   ]

@@ -35,15 +35,10 @@ output "slack_bot_worker_name" {
   value       = module.slack_bot_worker.worker_name
 }
 
-# Vercel Web App
+# Kubernetes Web App
 output "web_app_url" {
-  description = "Vercel web app URL"
-  value       = module.web_app.production_url
-}
-
-output "web_app_project_id" {
-  description = "Vercel project ID"
-  value       = module.web_app.project_id
+  description = "Kubernetes-hosted web app URL"
+  value       = var.web_app_url
 }
 
 # Modal
@@ -71,8 +66,8 @@ output "verification_commands" {
     # 2. Health check Modal
     curl ${module.modal_app.api_health_url}
 
-    # 3. Verify Vercel deployment
-    curl ${module.web_app.production_url}
+    # 3. Verify web app endpoint
+    curl ${var.web_app_url}
 
     # 4. Test authenticated endpoint (should return 401)
     curl ${module.control_plane_worker.worker_url}/sessions

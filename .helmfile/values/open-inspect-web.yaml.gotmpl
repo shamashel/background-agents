@@ -1,0 +1,76 @@
+{{- $host := printf "open-inspect.%s" .Values.privateDomain -}}
+
+image:
+  repository: "{{ .Values.web.imageRepository }}"
+  tag: "{{ .Values.version | default "latest" }}"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+serviceAccount:
+  create: true
+  name: open-inspect-web
+
+env:
+  - name: NEXTAUTH_URL
+    value: "https://{{ $host }}"
+  - name: CONTROL_PLANE_URL
+    value: "{{ .Values.controlPlaneUrl }}"
+  - name: NEXT_PUBLIC_WS_URL
+    value: "{{ .Values.wsUrl }}"
+  - name: ALLOWED_USERS
+    value: "{{ .Values.allowedUsers | default "" }}"
+  - name: ALLOWED_EMAIL_DOMAINS
+    value: "{{ .Values.allowedEmailDomains | default "" }}"
+
+secretEnv:
+  - name: GITHUB_CLIENT_ID
+    secretName: "{{ .Values.web.secretName }}"
+    key: github-client-id
+  - name: GITHUB_CLIENT_SECRET
+    secretName: "{{ .Values.web.secretName }}"
+    key: github-client-secret
+  - name: NEXTAUTH_SECRET
+    secretName: "{{ .Values.web.secretName }}"
+    key: nextauth-secret
+  - name: INTERNAL_CALLBACK_SECRET
+    secretName: "{{ .Values.web.secretName }}"
+    key: internal-callback-secret
+
+ingress:
+  enabled: true
+  className: "{{ .Values.ingress.className }}"
+  annotations:
+    cert-manager.io/cluster-issuer: "{{ .Values.ingress.certIssuer }}"
+  hosts:
+    - host: "{{ $host }}"
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: open-inspect-web-tls
+      hosts:
+        - "{{ $host }}"
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+containerPort: 3000
+
+readinessProbe:
+  enabled: true
+  path: /api/auth/session
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+
+livenessProbe:
+  enabled: true
+  path: /api/auth/session
+  initialDelaySeconds: 30
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 3

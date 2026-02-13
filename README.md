@@ -108,12 +108,13 @@ built for internal use where all employees are trusted and have access to compan
 | --------------------------------------- | ------------------------------------ |
 | [modal-infra](packages/modal-infra)     | Modal sandbox infrastructure         |
 | [control-plane](packages/control-plane) | Cloudflare Workers + Durable Objects |
-| [web](packages/web)                     | Next.js web client                   |
+| [web](packages/web)                     | Next.js web client (Kubernetes-hosted) |
 | [shared](packages/shared)               | Shared types and utilities           |
 
 ## Getting Started
 
 See **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** for deployment instructions.
+For web deployment details, see **[docs/WEB_K8S_DEPLOYMENT.md](docs/WEB_K8S_DEPLOYMENT.md)**.
 
 To understand the architecture and core concepts, read
 **[docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)**.

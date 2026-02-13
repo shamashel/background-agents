@@ -1,0 +1,17 @@
+environment: development
+namespace: open-inspect
+privateDomain: dev.example.internal
+
+ingress:
+  className: internal-nginx
+  certIssuer: letsencrypt-issuer
+
+web:
+  imageRepository: 123456789012.dkr.ecr.us-east-1.amazonaws.com/open-inspect-web
+  secretName: open-inspect-web-secrets
+
+controlPlaneUrl: https://open-inspect-control-plane-dev.example.workers.dev
+wsUrl: wss://open-inspect-control-plane-dev.example.workers.dev
+
+allowedUsers: ""
+allowedEmailDomains: ""
