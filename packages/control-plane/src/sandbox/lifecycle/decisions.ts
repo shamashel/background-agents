@@ -189,11 +189,14 @@ export function evaluateSpawnDecision(
 ): SpawnAction {
   const timeSinceLastSpawn = now - state.createdAt;
 
-  // Check if we have a snapshot to restore from
-  // This implements the Ramp spec: restore if sandbox has exited and user sends a follow-up
+  // Check if we have a snapshot to restore from.
+  // Covers both within-session restore (stopped/stale/failed) and cross-session reuse (pending).
   if (
     state.snapshotImageId &&
-    (state.status === "stopped" || state.status === "stale" || state.status === "failed")
+    (state.status === "pending" ||
+      state.status === "stopped" ||
+      state.status === "stale" ||
+      state.status === "failed")
   ) {
     return { action: "restore", snapshotImageId: state.snapshotImageId };
   }

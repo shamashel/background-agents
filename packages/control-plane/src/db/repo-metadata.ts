@@ -10,6 +10,7 @@ interface RepoMetadataRow {
   aliases: string | null;
   channel_associations: string | null;
   keywords: string | null;
+  snapshot_image_id: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -33,6 +34,7 @@ function toMetadata(row: RepoMetadataRow): RepoMetadata {
   if (channelAssociations) metadata.channelAssociations = channelAssociations;
   const keywords = parseJsonArray(row.keywords);
   if (keywords) metadata.keywords = keywords;
+  if (row.snapshot_image_id != null) metadata.snapshotImageId = row.snapshot_image_id;
   return metadata;
 }
 
@@ -55,8 +57,8 @@ export class RepoMetadataStore {
 
     await this.db
       .prepare(
-        `INSERT INTO repo_metadata (repo_owner, repo_name, description, aliases, channel_associations, keywords, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO repo_metadata (repo_owner, repo_name, description, aliases, channel_associations, keywords, snapshot_image_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(repo_owner, repo_name) DO UPDATE SET
            description = excluded.description,
            aliases = excluded.aliases,
@@ -71,6 +73,7 @@ export class RepoMetadataStore {
         metadata.aliases ? JSON.stringify(metadata.aliases) : null,
         metadata.channelAssociations ? JSON.stringify(metadata.channelAssociations) : null,
         metadata.keywords ? JSON.stringify(metadata.keywords) : null,
+        null,
         now,
         now
       )
@@ -106,5 +109,27 @@ export class RepoMetadataStore {
     }
 
     return map;
+  }
+
+  /**
+   * Update the snapshot image ID for a repository.
+   * This enables cross-session snapshot reuse.
+   */
+  async updateSnapshot(
+    repoOwner: string,
+    repoName: string,
+    snapshotImageId: string
+  ): Promise<void> {
+    const now = Date.now();
+    await this.db
+      .prepare(
+        `INSERT INTO repo_metadata (repo_owner, repo_name, snapshot_image_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(repo_owner, repo_name) DO UPDATE SET
+           snapshot_image_id = excluded.snapshot_image_id,
+           updated_at = excluded.updated_at`
+      )
+      .bind(repoOwner.toLowerCase(), repoName.toLowerCase(), snapshotImageId, now, now)
+      .run();
   }
 }

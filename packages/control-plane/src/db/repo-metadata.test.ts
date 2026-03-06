@@ -8,6 +8,7 @@ type RepoMetadataRow = {
   aliases: string | null;
   channel_associations: string | null;
   keywords: string | null;
+  snapshot_image_id: string | null;
   created_at: number;
   updated_at: number;
 };
@@ -15,6 +16,7 @@ type RepoMetadataRow = {
 const QUERY_PATTERNS = {
   SELECT_BY_PK: /^SELECT \* FROM repo_metadata WHERE repo_owner = \? AND repo_name = \?$/,
   UPSERT: /^INSERT INTO repo_metadata/,
+  UPSERT_SNAPSHOT: /^INSERT INTO repo_metadata \(repo_owner, repo_name, snapshot_image_id/,
 } as const;
 
 function normalizeQuery(query: string): string {
@@ -66,11 +68,13 @@ class FakeD1Database {
         aliases,
         channelAssociations,
         keywords,
+        snapshotImageId,
         createdAt,
         updatedAt,
       ] = args as [
         string,
         string,
+        string | null,
         string | null,
         string | null,
         string | null,
@@ -87,9 +91,39 @@ class FakeD1Database {
         aliases,
         channel_associations: channelAssociations,
         keywords,
+        snapshot_image_id: existing?.snapshot_image_id ?? snapshotImageId,
         created_at: existing ? existing.created_at : createdAt,
         updated_at: updatedAt,
       });
+      return { meta: { changes: 1 } };
+    }
+
+    if (QUERY_PATTERNS.UPSERT_SNAPSHOT.test(normalized)) {
+      const [owner, name, snapshotImageId, createdAt, updatedAt] = args as [
+        string,
+        string,
+        string,
+        number,
+        number,
+      ];
+      const key = this.rowKey(owner, name);
+      const existing = this.rows.get(key);
+      if (existing) {
+        existing.snapshot_image_id = snapshotImageId;
+        existing.updated_at = updatedAt;
+      } else {
+        this.rows.set(key, {
+          repo_owner: owner,
+          repo_name: name,
+          description: null,
+          aliases: null,
+          channel_associations: null,
+          keywords: null,
+          snapshot_image_id: snapshotImageId,
+          created_at: createdAt,
+          updated_at: updatedAt,
+        });
+      }
       return { meta: { changes: 1 } };
     }
 

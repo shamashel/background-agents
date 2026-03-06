@@ -157,6 +157,8 @@ export const DEFAULT_LIFECYCLE_CONFIG: Omit<SandboxLifecycleConfig, "controlPlan
 export interface LifecycleCallbacks {
   /** Called when the sandbox is being terminated (heartbeat stale, inactivity timeout). */
   onSandboxTerminating?: () => Promise<void>;
+  /** Called when a snapshot is saved, to persist to D1 for cross-session reuse. */
+  onSnapshotSaved?: (imageId: string) => Promise<void>;
 }
 
 // ==================== Manager ====================
@@ -544,6 +546,14 @@ export class SandboxLifecycleManager {
           imageId: result.imageId,
           reason,
         });
+
+        // Persist to D1 for cross-session reuse
+        this.callbacks.onSnapshotSaved?.(result.imageId).catch((e) =>
+          this.log.error("Failed to persist snapshot to D1", {
+            error: e instanceof Error ? e : String(e),
+            image_id: result.imageId,
+          })
+        );
       } else {
         this.log.error("Snapshot failed", { error: result.error, reason });
       }
