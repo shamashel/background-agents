@@ -54,6 +54,7 @@ import type { SessionRow, ParticipantRow, ArtifactRow, SandboxRow } from "./type
 import { SessionRepository } from "./repository";
 import { SessionWebSocketManagerImpl, type SessionWebSocketManager } from "./websocket-manager";
 import { SessionPullRequestService } from "./pull-request-service";
+import { RepoMetadataStore } from "../db/repo-metadata";
 import { RepoSecretsStore } from "../db/repo-secrets";
 import { GlobalSecretsStore } from "../db/global-secrets";
 import { mergeSecrets } from "../db/secrets-validation";
@@ -456,6 +457,18 @@ export class SessionDO extends DurableObject<Env> {
       config,
       {
         onSandboxTerminating: () => this.messageQueue.failStuckProcessingMessage(),
+        onSnapshotSaved: async (imageId: string) => {
+          const sess = this.repository.getSession();
+          if (sess?.repo_owner && sess?.repo_name) {
+            const store = new RepoMetadataStore(this.env.DB);
+            await store.updateSnapshot(sess.repo_owner, sess.repo_name, imageId);
+            this.log.info("Persisted snapshot to D1 for cross-session reuse", {
+              repo_owner: sess.repo_owner,
+              repo_name: sess.repo_name,
+              snapshot_image_id: imageId,
+            });
+          }
+        },
       }
     );
   }
@@ -1433,6 +1446,7 @@ export class SessionDO extends DurableObject<Env> {
       githubEmail?: string;
       githubToken?: string | null; // Plain GitHub token (will be encrypted)
       githubTokenEncrypted?: string | null; // Pre-encrypted GitHub token
+      repoSnapshotImageId?: string | null; // Cross-session snapshot for fast restore
     };
 
     const sessionId = this.ctx.id.toString();
@@ -1490,6 +1504,14 @@ export class SessionDO extends DurableObject<Env> {
       gitSyncStatus: "pending",
       createdAt: 0,
     });
+
+    // Seed repo-level snapshot for cross-session reuse
+    if (body.repoSnapshotImageId) {
+      this.repository.updateSandboxSnapshotImageId(sandboxId, body.repoSnapshotImageId);
+      this.log.info("Seeded repo snapshot for cross-session reuse", {
+        snapshot_image_id: body.repoSnapshotImageId,
+      });
+    }
 
     // Create owner participant with encrypted GitHub token
     const participantId = generateId();

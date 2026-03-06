@@ -221,6 +221,7 @@ export interface RepoMetadata {
   aliases?: string[];
   channelAssociations?: string[];
   keywords?: string[];
+  snapshotImageId?: string | null;
 }
 
 export interface EnrichedRepository extends InstallationRepository {

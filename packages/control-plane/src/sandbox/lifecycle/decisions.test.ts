@@ -177,6 +177,23 @@ describe("evaluateSpawnDecision", () => {
     expect(decision.action).toBe("restore");
   });
 
+  it('returns "restore" when snapshot exists and sandbox is pending (cross-session reuse)', () => {
+    const now = Date.now();
+    const state: SandboxState = {
+      status: "pending",
+      createdAt: 0,
+      snapshotImageId: "img-repo-snapshot",
+      hasActiveWebSocket: false,
+    };
+
+    const decision = evaluateSpawnDecision(state, config, now, false);
+
+    expect(decision.action).toBe("restore");
+    if (decision.action === "restore") {
+      expect(decision.snapshotImageId).toBe("img-repo-snapshot");
+    }
+  });
+
   it('returns "skip" when already spawning', () => {
     const now = Date.now();
     const state: SandboxState = {

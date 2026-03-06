@@ -11,6 +11,7 @@ import {
   type SourceControlProviderName,
 } from "./source-control";
 import { SessionIndexStore } from "./db/session-index";
+import { RepoMetadataStore } from "./db/repo-metadata";
 
 import {
   getValidModelOrDefault,
@@ -605,6 +606,28 @@ async function handleCreateSession(
       ? body.reasoningEffort
       : null;
 
+  // Fetch repo-level snapshot for cross-session reuse
+  let repoSnapshotImageId: string | null = null;
+  try {
+    const repoMetadataStore = new RepoMetadataStore(env.DB);
+    const metadata = await repoMetadataStore.get(repoOwner, repoName);
+    repoSnapshotImageId = metadata?.snapshotImageId ?? null;
+    if (repoSnapshotImageId) {
+      logger.info("Found repo snapshot for cross-session reuse", {
+        session_id: sessionId,
+        repo_owner: repoOwner,
+        repo_name: repoName,
+        snapshot_image_id: repoSnapshotImageId,
+      });
+    }
+  } catch (e) {
+    logger.warn("Failed to fetch repo snapshot", {
+      error: e instanceof Error ? e : String(e),
+      repo_owner: repoOwner,
+      repo_name: repoName,
+    });
+  }
+
   // Initialize session with user info and optional encrypted token
   const initResponse = await stub.fetch(
     internalRequest(
@@ -625,6 +648,7 @@ async function handleCreateSession(
           githubName,
           githubEmail,
           githubTokenEncrypted, // Pass encrypted token to store with owner
+          repoSnapshotImageId, // Cross-session snapshot for fast restore
         }),
       },
       ctx
